@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "structural-health-monitoring"
+version = "0.1.0"
+description = "AI-powered structural defect detection and inspection reporting platform"
+requires-python = ">=3.11"
+dependencies = [
+    # ── Machine learning and computer vision ──────────────
+    "ultralytics>=8.2.0",            # YOLOv8 and YOLOv9
+    "torch>=2.2.0",                  # deep learning framework YOLO runs on
+    "torchvision>=0.17.0",
+    "opencv-python-headless>=4.9.0", # image processing, drawing boxes
+    "numpy>=1.26.0",
+    "Pillow>=10.2.0",
+    # ── Web API ────────────────────────────────────────────
+    "fastapi>=0.110.0",              # the API framework
+    "uvicorn[standard]>=0.28.0",     # the server that runs FastAPI
+    "python-multipart>=0.0.9",       # lets the API receive uploaded images
+    # ── Database ───────────────────────────────────────────
+    "sqlalchemy>=2.0.0",             # how Python talks to PostgreSQL
+    "asyncpg>=0.29.0",               # fast async PostgreSQL driver
+    "geoalchemy2>=0.14.0",           # adds GPS/geometry columns
+    "psycopg2-binary>=2.9.9",        # sync driver (MLflow and Alembic need it)
+    "alembic>=1.13.0",               # database migrations
+    # ── AWS ────────────────────────────────────────────────
+    "boto3>=1.34.0",                 # AWS SDK for Python
+    # ── Experiment tracking ────────────────────────────────
+    "mlflow>=2.11.0",                # logs every training run
+    # ── GIS / mapping ──────────────────────────────────────
+    "geopandas>=0.14.0",
+    "folium>=0.16.0",                # interactive HTML maps
+    "shapely>=2.0.0",
+    # ── PDF reports ────────────────────────────────────────
+    "reportlab>=4.1.0",              # generates the inspection PDFs
+    # ── Monitoring ─────────────────────────────────────────
+    "prometheus-client>=0.20.0",     # exposes metrics for Prometheus
+    # ── Configuration ──────────────────────────────────────
+    "pydantic-settings>=2.2.0",      # reads .env into typed settings
+    "python-dotenv>=1.0.1",
+]
+
+[project.optional-dependencies]
+# Packages only needed during development and testing, not in production
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",        # test async code
+    "pytest-cov>=4.1.0",             # measure test coverage
+    "httpx>=0.27.0",                 # test the API
+    "ruff>=0.3.0",                   # linter and formatter
+]
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
