@@ -216,3 +216,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Dataset — too large for git; download from Zenodo (see Part 3)
+data/raw/
+data/processed/
+data/verify/
+
+# Model weights — large binaries; attach to GitHub Releases instead
+ml/weights/*.pt
+
+# Generated reports
+reports/output/
+
+# Environment
+.env
