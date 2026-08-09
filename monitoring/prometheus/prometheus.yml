@@ -1,0 +1,12 @@
+# monitoring/prometheus/prometheus.yml
+# Tells Prometheus what to scrape and how often.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "shm-api"
+    static_configs:
+      - targets: ["app:8000"]    # "app" = the docker-compose service name
+    metrics_path: "/metrics"

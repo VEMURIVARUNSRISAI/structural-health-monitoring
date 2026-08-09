@@ -1,0 +1,103 @@
+# docker-compose.yml
+#
+# Your complete local development stack. Five services:
+#   app        → your FastAPI application          (http://localhost:8000)
+#   db         → PostgreSQL + PostGIS database     (localhost:5432)
+#   mlflow     → experiment tracking UI            (http://localhost:5000)
+#   prometheus → metrics collector                 (http://localhost:9090)
+#   grafana    → monitoring dashboards             (http://localhost:3000)
+#
+# Start everything:  docker compose up -d
+# Stop everything:   docker compose down
+# View logs:         docker compose logs -f app
+
+version: "3.9"
+
+services:
+
+  # ── FastAPI application ──────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+    ports:
+      - "8000:8000"                      # host:container
+    env_file:
+      - .env
+    volumes:
+      # Mount local code into the container so edits apply without rebuilding
+      - ./app:/app/app
+      - ./ml/weights:/app/ml/weights
+      - ./reports:/app/reports
+    depends_on:
+      db:
+        condition: service_healthy       # wait until Postgres is ready
+      mlflow:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── PostgreSQL + PostGIS ─────────────────────────────────────────────────
+  # PostGIS adds geographic (latitude/longitude) support to PostgreSQL,
+  # which we need to store and map where each defect was found.
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: shm_db
+      POSTGRES_USER: shm_user
+      POSTGRES_PASSWORD: shm_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data   # persists data between restarts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shm_user -d shm_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── MLflow experiment tracking ───────────────────────────────────────────
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.11.0
+    command: >
+      mlflow server
+        --backend-store-uri postgresql://shm_user:shm_pass@db:5432/shm_db
+        --default-artifact-root /mlflow/artifacts
+        --host 0.0.0.0
+        --port 5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── Prometheus ───────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+
+  # ── Grafana ──────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.3.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  mlflow_artifacts:
+  grafana_data:
